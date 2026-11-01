@@ -10,7 +10,7 @@ const App = () => {
   const [linkURL, setLinkURL] = useState("");
   const [linkName, setLinkName] = useState("");
   const [editingId, setEditingId] = useState("");
-  const [editingLabelName, setEditingLabelName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [allLabels, setAllLabels] = useState([]);
   const [label, setLabel] = useState([]);
@@ -23,11 +23,14 @@ const App = () => {
 
   async function renderLabels() {
     try {
+      setLoading(true);
       const response = await axios.get(`${url}/labels`);
       setAllLabels(response.data);
       return response.data;
     } catch (err) {
       console.error(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -64,53 +67,53 @@ const App = () => {
 
   async function handleEditLabel(id) {
     try {
-      const payload = {labelName}
-      await axios.put(`${url}/label/${id}`, payload)
-      alert("Label Name has been editted successfully")
-      setLabelName("")
-      await renderLabels()
+      const payload = { labelName };
+      await axios.put(`${url}/label/${id}`, payload);
+      alert("Label Name has been editted successfully");
+      setLabelName("");
+      await renderLabels();
     } catch (err) {
       console.error(err.message);
-    }finally{
+    } finally {
       setIsEditingLabel(false);
     }
   }
 
-async function handleSaveURL(labelId) {
-  try {
+  async function handleSaveURL(labelId) {
     try {
-      new URL(linkURL);
-    } catch {
-      alert("Enter a valid URL");
-      return;
-    }
-
-    let finalName = linkName.trim();
-    if (!finalName) {
       try {
-        finalName = new URL(linkURL).hostname;
+        new URL(linkURL);
       } catch {
-        finalName = linkURL;
+        alert("Enter a valid URL");
+        return;
       }
+
+      let finalName = linkName.trim();
+      if (!finalName) {
+        try {
+          finalName = new URL(linkURL).hostname;
+        } catch {
+          finalName = linkURL;
+        }
+      }
+
+      const payload = { linkURL, linkName: finalName };
+      setSavingUrl(true);
+      await axios.put(`${url}/label/${labelId}/links`, payload);
+      alert("The URL has been saved successfully");
+
+      const labels = await renderLabels();
+      const updated = labels?.find((l) => l._id === labelId);
+      if (updated) setLabel(updated);
+
+      setLinkURL("");
+      setLinkName("");
+    } catch (err) {
+      console.error(err.message);
+    } finally {
+      setSavingUrl(false);
     }
-
-    const payload = { linkURL, linkName: finalName };
-    setSavingUrl(true);
-    await axios.put(`${url}/label/${labelId}/links`, payload);
-    alert("The URL has been saved successfully");
-
-    const labels = await renderLabels();
-    const updated = labels?.find((l) => l._id === labelId);
-    if (updated) setLabel(updated);
-
-    setLinkURL("");
-    setLinkName("");
-  } catch (err) {
-    console.error(err.message);
-  } finally {
-    setSavingUrl(false);
   }
-}
 
   async function deleteLinkURL(labelId, linkId) {
     try {
@@ -156,7 +159,9 @@ async function handleSaveURL(labelId) {
                 className="btn btn-primary"
                 disabled={creating}
                 onClick={() => {
-                  {isEditingLabel ? handleEditLabel(editingId) : createLabel();}
+                  {
+                    isEditingLabel ? handleEditLabel(editingId) : createLabel();
+                  }
                 }}
               >
                 {creating ? (
@@ -164,14 +169,24 @@ async function handleSaveURL(labelId) {
                 ) : (
                   <>
                     {" "}
-                  {isEditingLabel ? "Edit" : <> <IoMdAdd /> Create</>} Label
+                    {isEditingLabel ? (
+                      "Edit"
+                    ) : (
+                      <>
+                        {" "}
+                        <IoMdAdd /> Create
+                      </>
+                    )}{" "}
+                    Label
                   </>
                 )}
               </button>
             </div>
 
             <div className="label-list">
-              {allLabels.length === 0 ? (
+              {loading ? (
+                <h2 className="label-name" style={{textAlign: "center"}}>Loading....</h2>
+              ) : allLabels.length === 0 ? (
                 <div className="empty-state">
                   <p className="empty-text">
                     No activity yet. Create a new label to get started.
@@ -187,7 +202,7 @@ async function handleSaveURL(labelId) {
                       tabIndex={0}
                       onClick={() => {
                         setOpenLabel(true);
-                        setLabel(label)
+                        setLabel(label);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -213,9 +228,9 @@ async function handleSaveURL(labelId) {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setEditingId(label._id)
-                            setLabelName(label.labelName)
-                            setIsEditingLabel(true)
+                            setEditingId(label._id);
+                            setLabelName(label.labelName);
+                            setIsEditingLabel(true);
                           }}
                         >
                           Edit
