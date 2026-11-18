@@ -328,7 +328,6 @@ const App = () => {
                           <p className="meta">{link.date}</p>
                         </div>
                         <div className="link-actions">
-                          <button className="btn btn-ghost">Edit</button>
                           <button
                             className="btn btn-danger"
                             onClick={(e) => {
